@@ -11,20 +11,34 @@ namespace Beyond
 {
     public class BeyondCommandService
     {
-        private CultureInfo _culture;
+        private readonly CultureInfo _culture = new CultureInfo(ConfigurationManager.AppSettings["beyond-culture"] ?? "en-US") ;
+        private readonly string _tableName = ConfigurationManager.AppSettings["beyond-table-name"] ?? "beyond";
 
         public AmazonDynamoDBClient Dynamo;
 
         // Returns a short date equivalent - based off of the culture types.
         public string GetShortDate(DateTime time) => time.ToString("Y", _culture);
-        
+
+        public Task<GetItemResponse> GetItemAsync(GetItemRequest request)
+        {
+            request.TableName = _tableName;
+            return Dynamo.GetItemAsync(request);
+        }
+
+        public Task<PutItemResponse> PutItemAsync(PutItemRequest request)
+        {
+            request.TableName = _tableName;
+            return Dynamo.PutItemAsync(request);
+        }
+
+        public Task<UpdateItemResponse> UpdateItemAsync(UpdateItemRequest request)
+        {
+            request.TableName = _tableName;
+            return Dynamo.UpdateItemAsync(request);
+        }
+
         public BeyondCommandService()
         {
-            // Setting a culture
-            var cultureName = ConfigurationManager.AppSettings["beyond-culture"];
-            if (cultureName is null) cultureName = "en-US"; // If this does not exist, then we will have to set a default.
-            _culture = new CultureInfo(cultureName);
-
             // Setting Amazon DynamoDB integration.
             var profileName = ConfigurationManager.AppSettings["beyond-profile"];
             if (profileName is null) throw new NullReferenceException("Could not get beyond-profile app.config setting!");
@@ -72,12 +86,11 @@ namespace Beyond
             };
             var request = new GetItemRequest
             {
-                Key = key,
-                TableName = "beyond"
+                Key = key
             };
             try
             {
-                var response = await _service.Dynamo.GetItemAsync(request);
+                var response = await _service.GetItemAsync(request);
                 var item = response.Item;
                 // If item count is 0, then we know this value did not exist.
                 if (item.Count == 0)
@@ -100,7 +113,7 @@ namespace Beyond
                 // User has already voted for this candidate.
                 if (lastVoted == candidate.Id)
                 {
-                    await RespondAsync($"You have already voted for this candidate.");
+                    await RespondAsync("You have already voted for this candidate.");
                     return;
                 }
                 // If user has not voted for this candidate, update their value with this new candidate ID.
@@ -115,11 +128,10 @@ namespace Beyond
                 var updateRequest = new UpdateItemRequest
                 {
                     AttributeUpdates = updates,
-                    Key = key,
-                    TableName = "beyond"
+                    Key = key
                 };
                
-                var updateResponse = await _service.Dynamo.UpdateItemAsync(updateRequest);
+                var updateResponse = await _service.UpdateItemAsync(updateRequest);
                 if (updateResponse.HttpStatusCode != System.Net.HttpStatusCode.OK) throw new Exception($"Received error code on update request, error {updateResponse.HttpStatusCode}");
                 
             } catch (Exception e)
@@ -127,19 +139,33 @@ namespace Beyond
                 await RespondAsync($"There was a problem updating your vote!\nError Type: {e.GetType()}");
                 return;
             }
-            await RespondAsync($"Voted for {candidate.Username}");
+            await RespondAsync($"You have re-submitted your vote.");
         }
 
-        public async Task SetBanner(IAttachment attachment)
+        [SlashCommand("setbanner", "Set the banner of the server.")]
+        public async Task SetBanner(
+            [Summary(description:"banner image")]IAttachment attachment
+            )
         {
+
             // Stub: Set the banner for the server.
         }
 
+        [SlashCommand("setname", "Set the name of the server.")]
         public async Task SetName(string name)
         {
-            // Stub: Set the name for the server.
+            var guild = Context.Guild;
+            var guildId = guild.Id;
+            try
+            {
+
+            } catch (Exception e)
+            {
+                await RespondAsync($"There was a problem setting the guild name.\nError Type: {e.GetType().Name}");
+            }
         }
 
+        [SlashCommand("electionhistory", "Get the history of past elections.")]
         public async Task GetElectionHistory()
         {
             // Stub: Return the past 10 elections from the server.
