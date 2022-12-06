@@ -1,0 +1,9 @@
+# A schema for all data accessed - please refer to this and update any according changes.
+# This should ideally be done through code in later versions.
+
+Votes={guildId}/vote
+Schema = {
+	"date": DateTime 'Y'
+	"voter": number,
+	"candidate": number
+}

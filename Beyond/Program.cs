@@ -3,7 +3,6 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using dotenv.net;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using Discord;
 
 class Program
@@ -25,10 +24,11 @@ class Program
     {
         var config = new DiscordSocketConfig()
         {
-            GatewayIntents = GatewayIntents.All
+           GatewayIntents = GatewayIntents.All
         };
 
         var collection = new ServiceCollection()
+            //.AddSingleton(config)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<InteractionService>()
             .AddSingleton<BeyondCommandService>();
@@ -71,6 +71,7 @@ class Program
 #else
         var token = _environment["APPLICATION_TOKEN"];
 #endif
+        Console.WriteLine(token);
         if (token is null) throw new Exception("Could not find token in environment!");
 
         // Starting up the bot and adding events.
@@ -79,6 +80,7 @@ class Program
         _client.InteractionCreated += OnInteractionCreate;
         _interactionService.Log += LogError;
         await _client.LoginAsync(TokenType.Bot, token);
+        Console.WriteLine("We just logged in (potentially)");
         await _client.StartAsync();
 
         await Task.Delay(-1);
