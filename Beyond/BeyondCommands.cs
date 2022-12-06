@@ -11,55 +11,19 @@ namespace Beyond
 {
     public class BeyondCommandService
     {
-        private readonly CultureInfo _culture = new CultureInfo(ConfigurationManager.AppSettings["beyond-culture"] ?? "en-US") ;
-        private readonly string _tableName = ConfigurationManager.AppSettings["beyond-table-name"] ?? "beyond";
-
-        public AmazonDynamoDBClient Dynamo;
-
-        // Returns a short date equivalent - based off of the culture types.
-        public string GetShortDate(DateTime time) => time.ToString("Y", _culture);
-
-        public Task<GetItemResponse> GetItemAsync(GetItemRequest request)
+        public BeyondCommandService(BeyondDatabase db)
         {
-            request.TableName = _tableName;
-            return Dynamo.GetItemAsync(request);
-        }
-
-        public Task<PutItemResponse> PutItemAsync(PutItemRequest request)
-        {
-            request.TableName = _tableName;
-            return Dynamo.PutItemAsync(request);
-        }
-
-        public Task<UpdateItemResponse> UpdateItemAsync(UpdateItemRequest request)
-        {
-            request.TableName = _tableName;
-            return Dynamo.UpdateItemAsync(request);
-        }
-
-        public BeyondCommandService()
-        {
-            // Setting Amazon DynamoDB integration.
-            var profileName = ConfigurationManager.AppSettings["beyond-profile"];
-            if (profileName is null) throw new NullReferenceException("Could not get beyond-profile app.config setting!");
-            var chain = new CredentialProfileStoreChain();
-            AWSCredentials credentials;
-            if (!chain.TryGetAWSCredentials(profileName, out credentials)) throw new Exception("Could not get AWS profile from beyond-profile!");
-            var config = new AmazonDynamoDBConfig()
-            {
-                RegionEndpoint = Amazon.RegionEndpoint.USEast1
-            };
-            Dynamo = new AmazonDynamoDBClient(credentials, config);   
+            db.AddEndpointString("vote", "{guild}/vote", "{yearMonth}/{user}");
         }
     }
 
     // TODO: Remove hardcoded data entries and table points.
-    public class BeyondCommands : InteractionModuleBase
+    public sealed class BeyondCommands : InteractionModuleBase
     {
-        private readonly BeyondCommandService _service;
-        public BeyondCommands(BeyondCommandService s)
+        private readonly BeyondDatabase _database;
+        public BeyondCommands(BeyondDatabase database)
         {
-            _service = s;
+            _database = database;
         }
 
         [SlashCommand("vote", "Vote for Gumby of the Month")]
@@ -76,8 +40,8 @@ namespace Beyond
                 return;
             }
 
-            var endpoint = $"{guildId}/vote";
-            var tag = $"{_service.GetShortDate(DateTime.UtcNow)}/{user.Id}";
+            var endpoint = _database.GetEndpointString("vote", Context);
+            var tag = _database.GetTagString("vote", Context);
             // TODO: Move to larger scheme
             var key = new Dictionary<string, AttributeValue>
             {
@@ -90,7 +54,7 @@ namespace Beyond
             };
             try
             {
-                var response = await _service.GetItemAsync(request);
+                var response = await _database.GetItemAsync(request);
                 var item = response.Item;
                 // If item count is 0, then we know this value did not exist.
                 if (item.Count == 0)
@@ -98,10 +62,9 @@ namespace Beyond
                     key["candidate"] = new AttributeValue { N = candidate.Id.ToString() };
                     var putRequest = new PutItemRequest
                     {
-                        Item = key,
-                        TableName = "beyond"
+                        Item = key
                     };
-                    var putResponse = await _service.Dynamo.PutItemAsync(putRequest);
+                    var putResponse = await _database.PutItemAsync(putRequest);
                     await RespondAsync("You have submitted your vote.");
                     return;
                 }
@@ -131,7 +94,7 @@ namespace Beyond
                     Key = key
                 };
                
-                var updateResponse = await _service.UpdateItemAsync(updateRequest);
+                var updateResponse = await _database.UpdateItemAsync(updateRequest);
                 if (updateResponse.HttpStatusCode != System.Net.HttpStatusCode.OK) throw new Exception($"Received error code on update request, error {updateResponse.HttpStatusCode}");
                 
             } catch (Exception e)

@@ -22,11 +22,14 @@ class Program
 
     private static IServiceProvider CreateServices()
     {
+        var db = new BeyondDatabase();
+        var commandService = new BeyondCommandService(db);
+
         var collection = new ServiceCollection()
             //.AddSingleton(config)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<InteractionService>()
-            .AddSingleton<BeyondCommandService>();
+            .AddSingleton(db);
 
         return collection.BuildServiceProvider();
     }
