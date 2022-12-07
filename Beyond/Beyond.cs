@@ -5,19 +5,22 @@ using dotenv.net;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
 
-class Program
+class BeyondBot
 {
     private readonly IServiceProvider _serviceProvider;
     private IDictionary<string, string> _environment;
     private DiscordSocketClient _client;
-    private InteractionService _interactionService; 
+    private InteractionService _interactionService;
+    private BeyondDatabase _database;
 
-    public Program()
+    public BeyondBot()
     {
         _environment = DotEnv.Read();
         _serviceProvider = CreateServices();
         _client = _serviceProvider.GetService<DiscordSocketClient>()!;
         _interactionService = _serviceProvider.GetService<InteractionService>()!;
+        _database = _serviceProvider.GetService<BeyondDatabase>()!;
+        _database.AddEndpointString("self", "self", "self");
     }
 
     private static IServiceProvider CreateServices()
@@ -29,7 +32,8 @@ class Program
             //.AddSingleton(config)
             .AddSingleton<DiscordSocketClient>()
             .AddSingleton<InteractionService>()
-            .AddSingleton(db);
+            .AddSingleton(db)
+            .AddSingleton<BeyondElectionService>();
 
         return collection.BuildServiceProvider();
     }
@@ -60,7 +64,7 @@ class Program
         await _interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
     }
 
-    public static Task Main(String[] args) => new Program().Start(args);
+    public static Task Main(String[] args) => new BeyondBot().Start(args);
 
     public async Task Start(String[] args)
     {

@@ -135,5 +135,11 @@ namespace Beyond
             request.TableName = _tableName;
             return Dynamo.UpdateItemAsync(request);
         }
+
+        public Task<QueryResponse> QueryAsync(QueryRequest request)
+        {
+            request.TableName = _tableName;
+            return Dynamo.QueryAsync(request);
+        }
     }
 }

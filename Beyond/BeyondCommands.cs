@@ -1,11 +1,8 @@
 ﻿using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
-using Amazon.Runtime;
-using Amazon.Runtime.CredentialManagement;
 using Discord;
 using Discord.Interactions;
 using System.Configuration;
-using System.Globalization;
 
 namespace Beyond
 {
@@ -13,17 +10,18 @@ namespace Beyond
     {
         public BeyondCommandService(BeyondDatabase db)
         {
-            db.AddEndpointString("vote", "{guild}/vote", "{yearMonth}/{user}");
+            db.AddEndpointString("vote", "vote", "{yearMonth}/{guild}/{user}");
         }
     }
 
-    // TODO: Remove hardcoded data entries and table points.
     public sealed class BeyondCommands : InteractionModuleBase
     {
         private readonly BeyondDatabase _database;
-        public BeyondCommands(BeyondDatabase database)
+        private readonly BeyondElectionService _election;
+        public BeyondCommands(BeyondDatabase database, BeyondElectionService election)
         {
             _database = database;
+            _election = election;
         }
 
         [SlashCommand("vote", "Vote for Gumby of the Month")]
@@ -42,7 +40,6 @@ namespace Beyond
 
             var endpoint = _database.GetEndpointString("vote", Context);
             var tag = _database.GetTagString("vote", Context);
-            // TODO: Move to larger scheme
             var key = new Dictionary<string, AttributeValue>
             {
                 ["endpoint"] = new AttributeValue { S = endpoint },
@@ -131,7 +128,6 @@ namespace Beyond
         [SlashCommand("electionhistory", "Get the history of past elections.")]
         public async Task GetElectionHistory()
         {
-            // Stub: Return the past 10 elections from the server.
         }
     }
 }
