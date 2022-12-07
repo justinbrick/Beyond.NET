@@ -60,7 +60,6 @@ namespace Beyond
                     }
             };
             var response = await _db.QueryAsync(request);
-            Console.WriteLine($"Got response {response.HttpStatusCode}, {response.Count} items");
             var electionList = new Dictionary<ulong, Dictionary<ulong, ulong>>();
             foreach (var item in response.Items)
             {
@@ -81,7 +80,6 @@ namespace Beyond
                 var leaderboard = election.Value;
                 var maxVotes = leaderboard.Values.Max();
                 var winner = leaderboard.FirstOrDefault(x => x.Value == maxVotes).Key;
-                Console.WriteLine($"Winner for {guildId} is {winner}");
                 var guild = _client.GetGuild(guildId);
                 if (guild is null) continue; // We've been removed from this guild - oh well, just ignore.
                 var general = guild.TextChannels.FirstOrDefault(channel => channel.Name == "general");
@@ -90,7 +88,6 @@ namespace Beyond
             }
         }
             
-
         public BeyondElectionService(DiscordSocketClient client, BeyondDatabase db)
         {
             _db = db;

@@ -4,6 +4,8 @@ using Discord.WebSocket;
 using dotenv.net;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
+using Amazon.DynamoDBv2.Model;
+using System.Linq;
 
 class BeyondBot
 {
@@ -12,6 +14,15 @@ class BeyondBot
     private DiscordSocketClient _client;
     private InteractionService _interactionService;
     private BeyondDatabase _database;
+
+    public static readonly string[] DefaultChannels =
+    {
+        "general",
+        ""
+    };
+
+    public const string GumbyRole = "gumby";
+    public const string BeyondCategory = "beyond";
 
     public BeyondBot()
     {
@@ -41,6 +52,46 @@ class BeyondBot
     {
         Console.WriteLine(msg.ToString());
         return Task.CompletedTask;
+    }
+
+
+    private async Task VerifyGuilds()
+    {
+        try
+        {
+            var guildQuery = new QueryRequest
+            {
+                FilterExpression = "endpoint = :guild",
+                ExpressionAttributeValues =
+                {
+                    ["guild"] = new AttributeValue{S = "guild"}
+                }
+            };
+            var guildResponse = await _database.QueryAsync(guildQuery);
+            var guildMap = guildResponse.Items.ToDictionary(guild => guild.TryGetValue("tag", out var result) ? ulong.Parse(result.S) : 0);\
+            var requests = new List<WriteRequest>();
+            foreach (var guild in _client.Guilds)
+            {
+                
+                if (guildMap.ContainsKey(guild.Id))
+                {
+                    Dictionary<string, ulong> channelChanges = new();
+                    var guildChannels = guild.Channels.ToDictionary(guild => guild.Name);
+                    var guildData = guildMap[guild.Id];
+                    if (!guildData.ContainsKey("beyond"))
+                    {
+                        ICategoryChannel? category = guild.CategoryChannels.FirstOrDefault(channel => channel.Name == BeyondCategory);
+                        if (category is null) category = (await guild.CreateCategoryChannelAsync(BeyondCategory));
+
+                    }
+                }
+                
+            }
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"There was an error attempting to verify the integrity of different servers!\n{e.Message}");
+        }
     }
 
     private async Task OnClientReady()

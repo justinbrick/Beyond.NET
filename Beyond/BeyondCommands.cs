@@ -17,11 +17,9 @@ namespace Beyond
     public sealed class BeyondCommands : InteractionModuleBase
     {
         private readonly BeyondDatabase _database;
-        private readonly BeyondElectionService _election;
         public BeyondCommands(BeyondDatabase database, BeyondElectionService election)
         {
             _database = database;
-            _election = election;
         }
 
         [SlashCommand("vote", "Vote for Gumby of the Month")]
