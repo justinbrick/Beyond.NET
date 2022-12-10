@@ -68,7 +68,6 @@ namespace Beyond
         {
             if (_endpointStrings.ContainsKey(endpointName)) throw new Exception($"Endpoint \"{endpointName}\" is already registered within the database!");
             _endpointStrings[endpointName] = endpointFormatString;
-            Console.WriteLine(_endpointStrings.Count);
             _tagStrings[endpointName] = tagFormatString;
         }
 

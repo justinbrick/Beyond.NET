@@ -1,7 +1,14 @@
 # A schema for all data accessed - please refer to this and update any according changes.
 # This should ideally be done through code in later versions.
 
+Endpoints:
 Endpoint	Tag
 vote		{yearMonth}/{guild}/{user}
 gumby		{guild}/{yearMonth}
 guild		{guild}
+
+Attributes:
+vote::candidate -> ulong
+gumby::id -> ulong
+guild::beyond -> ulong 
+guild::general -> ulong
