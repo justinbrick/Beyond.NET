@@ -4,7 +4,6 @@
 Endpoints:
 Endpoint	Tag
 vote		{yearMonth}/{guild}/{user}
-gumby		{guild}/{yearMonth}
 guild		{guild}
 
 Attributes:
@@ -12,3 +11,4 @@ vote::candidate -> ulong
 gumby::id -> ulong
 guild::beyond -> ulong 
 guild::general -> ulong
+guild::gumby -> ulong
