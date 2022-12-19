@@ -2,9 +2,6 @@
 using Amazon.DynamoDBv2.Model;
 using Discord;
 using Discord.WebSocket;
-using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
-using System.Linq;
 
 namespace Beyond
 {
@@ -101,24 +98,31 @@ namespace Beyond
             }
         }
 
-        private async Task OnClientReady()
+        private Task OnClientReady()
         {
-            while (!CancellationToken.IsCancellationRequested)
+            Task.Run(async () =>
             {
-                var startDate = DateTime.UtcNow;
-                try
+                while (!CancellationToken.IsCancellationRequested)
                 {
-                    await CreateGumbyElections();
+                    var startDate = DateTime.UtcNow;
+                    try
+                    {
+                        await CreateGumbyElections();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Error.WriteLine($"Error while checking election info! {e.ToString()}");
+                        break;
+                    }
+                    TimeSpan durationTaken = DateTime.UtcNow - startDate;
+                    var timeWait = TimeSpan.FromDays(1) - durationTaken;
+                    await Task.Delay(timeWait);
                 }
-                catch (Exception e)
-                {
-                    Console.Error.WriteLine($"Error while checking election info! {e.ToString()}");
-                    break;
-                }
-                TimeSpan durationTaken = DateTime.UtcNow - startDate;
-                var timeWait = TimeSpan.FromDays(1) - durationTaken;
-                await Task.Delay(timeWait);
-            }
+            }).ContinueWith((result) =>
+            {
+                if (result.IsCanceled) Console.Error.WriteLine("Beyond Election Service has been cancelled - was this intentional?");
+            });
+            return Task.CompletedTask;
         }
 
         public BeyondElectionService(DiscordSocketClient client, BeyondDatabase db)
