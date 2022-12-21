@@ -78,10 +78,7 @@ namespace Beyond
             getResponse = await GetItemAsync(getRequest);
             getResponse.Item["guild"] = new AttributeValue { N = guild.Id.ToString() };
             getResponse.Item["tag"] = new AttributeValue { S = "information" };
-            await BeyondBot.Instance.VerifyGuild(getResponse.Item, _client.GetGuild(guild.Id));
-            getResponse = await GetItemAsync(getRequest);
-          
-            
+            await BeyondBot.Instance.VerifyGuild(getResponse.Item, _client.GetGuild(guild.Id));            
             return getResponse.Item;
         }
     }

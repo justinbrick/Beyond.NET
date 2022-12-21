@@ -28,17 +28,19 @@ namespace Beyond
 
         public async Task CreateGumbyElection(IGuild guild)
         {
-            Console.WriteLine("Creating Guild Election");
             Dictionary<string, AttributeValue> guildInformation = await _db.GetGuildInformation(guild);
-            var election = await GetElection(guild, DateTime.UtcNow.AddMonths(-1));
-            if (election.Count != 0) return; // Void if election finished (maybe check if GOTM has their role?)
-            if (!guildInformation.TryGetValue("general", out var generalId))
+            if (!guildInformation.TryGetValue("general", out var generalObject) || !guildInformation.TryGetValue("gumby", out var gumbyRoleObject))
             {
-                Console.Error.WriteLine($"Could not get the general channel from guild information - has this guild been initialized yet? {guild.Id}");
+                Console.Error.WriteLine($"Could not get the general channel or gumby role from guild information - has this guild been initialized yet? {guild.Id}");
                 return;
             }
-            var general = (await guild.GetChannelAsync(ulong.Parse(generalId.N))) as ITextChannel;
+            var generalId = ulong.Parse(generalObject.N);
+            var gumbyRoleId = ulong.Parse(gumbyRoleObject.N);
+            var general = (await guild.GetChannelAsync(generalId)) as ITextChannel;
             if (general is null) throw new Exception("Found null general while getting election results!");
+            var gumbyRole = guild.GetRole(gumbyRoleId);
+            var election = await GetElection(guild, DateTime.UtcNow.AddMonths(-1));
+            if (election.Count != 0) return; // Void if election finished (maybe check if GOTM has their role?)
             var lastMonth = DateTime.UtcNow.AddMonths(-1);
             var getQuery = new QueryRequest
             {
@@ -54,6 +56,7 @@ namespace Beyond
             var leaderboards = new Dictionary<ulong, ulong>();
             await guild.DownloadUsersAsync();
             var users = await guild.GetUsersAsync();
+            var possibleUsers = users.Where(user => !user.IsBot);
             // Tally up the votes, so that we can query this later.
             foreach (var vote in queryResponse.Items)
             {
@@ -65,7 +68,17 @@ namespace Beyond
             // Get the top person from the leaderboards that is currently in the guild.
             var topList = from candidate in leaderboards join user in users on candidate.Key equals user.Id orderby candidate.Value descending select candidate.Key;
             // If the top list is empty, that means that there were no candidates, and that we need to pick a random person from the group.
-            ulong winner = topList.Count() == 0 ? users.ElementAt(_random.Next(users.Count)).Id : topList.First();
+            ulong winner = topList.Count() == 0 ? (possibleUsers.FirstOrDefault(user => user.RoleIds.Contains(gumbyRoleId)) ?? possibleUsers.ElementAt(_random.Next(possibleUsers.Count()))).Id : topList.First();
+            // Go through the users, if they are not the winner & have the gumby role, remove the role from them.
+            foreach (var user in users)
+            {
+                if (user.Id == winner) await user.AddRoleAsync(gumbyRoleId);
+                else
+                {
+                    if (user.RoleIds.Contains(gumbyRoleId)) await user.RemoveRoleAsync(gumbyRoleId);
+                    if (user.IsBot && user.Id != _client.CurrentUser.Id) await user.KickAsync("New GOTM, please re-invite this bot if you wish to have it.");
+                }
+            }
             await general.SendMessageAsync($"The winner of the GOTM is <@!{winner}>");
             
             var putRequest = new PutItemRequest

@@ -22,7 +22,7 @@ class BeyondBot
     public static readonly BeyondBot Instance = new();
 
     // The name of the Gumby role
-    public const string GumbyRoleName = "gumby";
+    public const string GumbyRoleName = "Gumby of the Month";
     // The color of the Gumby role
     public static readonly Color GumbyColor = new Color(191, 24, 226);
 
@@ -86,19 +86,29 @@ class BeyondBot
         return Task.CompletedTask;
     }
 
-    public async Task VerifyGuild(Dictionary<string, AttributeValue> guildResource, SocketGuild guild) { 
-    
+    public async Task VerifyGuild(Dictionary<string, AttributeValue> guildResource, SocketGuild guild) {
+
         Dictionary<string, AttributeValueUpdate> changes = new();
-        IRole? gumbyRole = guild.GetRole(guildResource.TryGetValue(GumbyRoleName, out var gumbyRoleId) ? ulong.Parse(gumbyRoleId.N) : 0);
+        IRole? gumbyRole = guild.GetRole(guildResource.TryGetValue("gumby", out var gumbyRoleId) ? ulong.Parse(gumbyRoleId.N) : 0);
         if (gumbyRole is null)
         {
             gumbyRole = guild.Roles.FirstOrDefault(role => role.Name == GumbyRoleName);
             gumbyRole ??= await guild.CreateRoleAsync(GumbyRoleName, permissions: GumbyGuildPermissions, color: GumbyColor);
-            changes[GumbyRoleName] = new AttributeValueUpdate
+            var value = new AttributeValue { N = gumbyRole.Id.ToString() };
+            changes["gumby"] = new AttributeValueUpdate
             {
                 Action = "PUT",
-                Value = new AttributeValue { N = gumbyRole.Id.ToString() }
+                Value = value
             };
+            guildResource["gumby"] = value;
+        }
+        if (gumbyRole.Name != GumbyRoleName || gumbyRole.Color != GumbyColor)
+        {
+            await gumbyRole.ModifyAsync(role =>
+            {
+                role.Name = GumbyRoleName;
+                role.Color = GumbyColor;
+            });
         }
 
         // Get the category channel from a guild ID. If it cannot find it, then try and replace it with channel that's already in the guild named the same thing (if there is one) 
@@ -113,11 +123,13 @@ class BeyondBot
                     new Overwrite(gumbyRole.Id, PermissionTarget.Role, GumbyDefaultChannelRestrictions)
                 };
             });
+            var value = new AttributeValue { N = beyondCategoryChannel.Id.ToString() };
             changes[BeyondCategoryName] = new AttributeValueUpdate
             {
                 Action = "PUT",
-                Value = new AttributeValue { N = beyondCategoryChannel.Id.ToString()  }
+                Value = value
             };
+            guildResource[BeyondCategoryName] = value;
         }
         // If this category is not properly configured, then let's fix the attributes so it's properly placed.
         if (beyondCategoryChannel.Position != 0 || beyondCategoryChannel.Name != BeyondCategoryName)
@@ -145,11 +157,13 @@ class BeyondBot
                         new Overwrite(gumbyRole.Id, PermissionTarget.Role, GumbyDefaultChannelRestrictions)
                     };
                 });
+                var value = new AttributeValue { N = channel.Id.ToString() };
                 changes[resourceName] = new AttributeValueUpdate
                 {
                     Action = "PUT",
-                    Value = new AttributeValue { N = channel.Id.ToString() }
+                    Value = value
                 };
+                guildResource[resourceName] = value;
             }
             // This is a redundant request in the case that there actually is a channel that fits the conditions. We need to make sure that these channels are current & available.
             if (channel.CategoryId != beyondCategoryChannel.Id || channel.Name != channelName || channel.Position != i)
