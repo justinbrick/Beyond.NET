@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,7 +16,10 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y $(ProjectDir).env $(ProjectDir)$(OutDir)" />
+	  <Copy
+		  SourceFiles="$(ProjectDir).env"
+		  DestinationFolder="$(ProjectDir)$(OutDir)"
+		  SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
