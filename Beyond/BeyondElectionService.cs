@@ -72,11 +72,17 @@ namespace Beyond
             // Go through the users, if they are not the winner & have the gumby role, remove the role from them.
             foreach (var user in users)
             {
-                if (user.Id == winner) await user.AddRoleAsync(gumbyRoleId);
-                else
+                try
                 {
-                    if (user.RoleIds.Contains(gumbyRoleId)) await user.RemoveRoleAsync(gumbyRoleId);
-                    if (user.IsBot && user.Id != _client.CurrentUser.Id) await user.KickAsync("New GOTM, please re-invite this bot if you wish to have it.");
+                    if (user.Id == winner) await user.AddRoleAsync(gumbyRoleId);
+                    else
+                    {
+                        if (user.RoleIds.Contains(gumbyRoleId)) await user.RemoveRoleAsync(gumbyRoleId);
+                        if (user.IsBot && user.Id != _client.CurrentUser.Id && user.GuildId == guild.Id) await user.KickAsync("New GOTM, please re-invite this bot if you wish to have it.");
+                    }
+                } catch (Exception e)
+                {
+                    Console.Error.WriteLine($"Could not kick user, Name: {user.DisplayName}, Hierarchy: {user.Hierarchy}, Mention: {user.Mention}");
                 }
             }
             await general.SendMessageAsync($"The winner of the GOTM is <@!{winner}>");

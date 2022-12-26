@@ -23,6 +23,7 @@ namespace Beyond
             [Summary(description: "candidate")] IUser candidate
             )
         {
+            Console.WriteLine("We just registered this vote command");
             try
             {
                 var guildId = Context.Interaction.GuildId;
@@ -49,7 +50,7 @@ namespace Beyond
                 key["candidate"] = new AttributeValue { N = candidate.Id.ToString() };
                 var putRequest = new PutItemRequest { Item = key };
                 await _database.PutItemAsync(putRequest);
-                await RespondAsync(response.Item.Count == 0 ? "You have submit your vote." : "You have re-submitted your vote.");
+                await RespondAsync(response.Item.Count == 0 ? "You have submit vote." : "You have re-submit vote.");
                 return;
             } catch (Exception e)
             {
