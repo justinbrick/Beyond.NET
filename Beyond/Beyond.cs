@@ -40,8 +40,6 @@ class BeyondBot
             createInstantInvite: true,
             viewGuildInsights: true
         );
-    // The name of the category channel which all the template channels are stored in.
-    public const string BeyondCategoryName = "beyond";
     // The permissions which the Gumby is not allowed to have. These are for the default channels only, and they will still be able to manage the ones that are not defaults.
     public static readonly OverwritePermissions GumbyDefaultChannelRestrictions = new(manageChannel: PermValue.Deny);
     // A list of database identifiers, as well as the names used as display names for those channels.
@@ -109,37 +107,8 @@ class BeyondBot
                 role.Name = GumbyRoleName;
                 role.Color = GumbyColor;
             });
-        }
-
-        // Get the category channel from a guild ID. If it cannot find it, then try and replace it with channel that's already in the guild named the same thing (if there is one) 
-        ICategoryChannel? beyondCategoryChannel = guild.GetCategoryChannel(guildResource.TryGetValue(BeyondCategoryName, out var categoryChannelId) ? ulong.Parse(categoryChannelId.N) : 0);
-        if (beyondCategoryChannel is null)
-        {
-            beyondCategoryChannel = guild.CategoryChannels.FirstOrDefault(channel => channel.Name == BeyondCategoryName);
-            beyondCategoryChannel ??= await guild.CreateCategoryChannelAsync(BeyondCategoryName, (channelProperties) =>
-            {
-                channelProperties.PermissionOverwrites = new List<Overwrite>()
-                {
-                    new Overwrite(gumbyRole.Id, PermissionTarget.Role, GumbyDefaultChannelRestrictions)
-                };
-            });
-            var value = new AttributeValue { N = beyondCategoryChannel.Id.ToString() };
-            changes[BeyondCategoryName] = new AttributeValueUpdate
-            {
-                Action = "PUT",
-                Value = value
-            };
-            guildResource[BeyondCategoryName] = value;
-        }
-        // If this category is not properly configured, then let's fix the attributes so it's properly placed.
-        if (beyondCategoryChannel.Position != 0 || beyondCategoryChannel.Name != BeyondCategoryName)
-        {
-            await beyondCategoryChannel.ModifyAsync(properties =>
-            {
-                properties.Name = BeyondCategoryName;
-                properties.Position = 0;
-            });
-        }
+        }        
+        
         // Iterate through the list of mappings and channel names to see if they exist - if they don't, create / find one.
         for (int i = 0; i < GuildMappings.Count; ++i)
         {
@@ -151,7 +120,6 @@ class BeyondBot
                 channel = guild.TextChannels.FirstOrDefault(channel => channel.Name == channelName);
                 channel ??= await guild.CreateTextChannelAsync(channelName, (properties) =>
                 {
-                    properties.CategoryId = beyondCategoryChannel.Id;
                     properties.PermissionOverwrites = new List<Overwrite>()
                     {
                         new Overwrite(gumbyRole.Id, PermissionTarget.Role, GumbyDefaultChannelRestrictions)
@@ -166,11 +134,10 @@ class BeyondBot
                 guildResource[resourceName] = value;
             }
             // This is a redundant request in the case that there actually is a channel that fits the conditions. We need to make sure that these channels are current & available.
-            if (channel.CategoryId != beyondCategoryChannel.Id || channel.Name != channelName || channel.Position != i)
+            if (channel.Name != channelName || channel.Position != i)
             {
                 await channel.ModifyAsync(properties =>
                 {
-                    properties.CategoryId = beyondCategoryChannel.Id;
                     properties.Name = channelName;
                     properties.Position = i;
                     properties.PermissionOverwrites = new List<Overwrite>()
