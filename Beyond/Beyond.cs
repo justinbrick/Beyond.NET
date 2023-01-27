@@ -134,12 +134,11 @@ class BeyondBot
                 guildResource[resourceName] = value;
             }
             // This is a redundant request in the case that there actually is a channel that fits the conditions. We need to make sure that these channels are current & available.
-            if (channel.Name != channelName || channel.Position != i)
+            if (channel.Name != channelName)
             {
                 await channel.ModifyAsync(properties =>
                 {
                     properties.Name = channelName;
-                    properties.Position = i;
                     properties.PermissionOverwrites = new List<Overwrite>()
                     {
                         new Overwrite(gumbyRole.Id, PermissionTarget.Role, GumbyDefaultChannelRestrictions)
