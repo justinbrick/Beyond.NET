@@ -97,7 +97,7 @@ namespace Beyond
                 }
                 await Context.Guild.ModifyAsync(properties =>
                 {
-                    properties.Icon = new Image(response.Content.ReadAsStream());
+                    properties.Banner = new Image(response.Content.ReadAsStream());
                 });
                 await FollowupAsync("Successfully set the guild banner!");
             }
